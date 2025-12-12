@@ -16,7 +16,10 @@ const MOCK_DATA: Contact[] = [
     occupation: 'Gallery Curator',
     interests: 'Modern art, hiking, ceramic pottery',
     notes: 'Remember she is allergic to peanuts.',
-    avatarColor: 'bg-indigo-500'
+    avatarColor: 'bg-indigo-500',
+    lastContactedDate: '2023-10-15',
+    contactFrequency: 'monthly',
+    tier: 'Close Friend/Family'
   },
   {
     id: '2',
@@ -29,7 +32,10 @@ const MOCK_DATA: Contact[] = [
     occupation: 'Software Engineer',
     interests: 'Sci-fi novels, mechanical keyboards, coffee roasting',
     notes: 'Met at the conference in 2022.',
-    avatarColor: 'bg-emerald-500'
+    avatarColor: 'bg-emerald-500',
+    lastContactedDate: '2023-12-01',
+    contactFrequency: 'quarterly',
+    tier: 'Friend/Colleague'
   }
 ];
 

@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Contact, Child, COLORS } from '../types';
+import { Contact, Child, COLORS, ContactFrequency, TierLevel } from '../types';
 import { getRandomColor } from '../services/storageService';
 import { Button } from './ui/Button';
 import { AIAssistant } from './AIAssistant';
 import { 
   ChevronLeft, Save, Trash2, Calendar, 
   Briefcase, GraduationCap, Heart, Users, 
-  Sparkles, FileText, Smile 
+  Sparkles, FileText, Smile, Clock, Activity,
+  ChevronDown
 } from 'lucide-react';
 
 interface ContactFormProps {
@@ -27,8 +28,14 @@ const EMPTY_CONTACT: Contact = {
   occupation: '',
   interests: '',
   notes: '',
-  avatarColor: ''
+  avatarColor: '',
+  lastContactedDate: '',
+  contactFrequency: '',
+  tier: ''
 };
+
+const FREQUENCY_OPTIONS: ContactFrequency[] = ['weekly', 'monthly', 'quarterly', 'bi-annually', 'yearly'];
+const TIER_OPTIONS: TierLevel[] = ['Close Friend/Family', 'Friend/Colleague', 'Acquaintance'];
 
 export const ContactForm: React.FC<ContactFormProps> = ({ 
   initialData, 
@@ -45,7 +52,7 @@ export const ContactForm: React.FC<ContactFormProps> = ({
     window.scrollTo(0, 0);
   }, []);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
@@ -101,6 +108,11 @@ export const ContactForm: React.FC<ContactFormProps> = ({
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-gray-900">{formData.firstName} {formData.lastName}</h1>
             <p className="text-lg text-gray-500 mt-1">{formData.occupation}</p>
+            {formData.tier && (
+               <span className="inline-block mt-2 px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-medium uppercase tracking-wide">
+                 {formData.tier}
+               </span>
+            )}
           </div>
 
           <div className="grid grid-cols-1 gap-4">
@@ -112,6 +124,26 @@ export const ContactForm: React.FC<ContactFormProps> = ({
             >
               Ask AI Assistant
             </Button>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="p-4 border-b border-gray-50 font-semibold text-gray-700 bg-gray-50 flex items-center gap-2">
+              <Activity size={18} className="text-blue-500" /> Contact Rhythm
+            </div>
+            <div className="p-4 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-medium text-gray-400 uppercase">Last Contact</label>
+                  <p className="text-gray-900 font-medium">{formData.lastContactedDate || "Not set"}</p>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-400 uppercase">Target Frequency</label>
+                  <p className="text-blue-600 font-medium bg-blue-50 inline-block px-2 py-0.5 rounded-md mt-1 capitalize">
+                    {formData.contactFrequency || "None"}
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
@@ -197,9 +229,55 @@ export const ContactForm: React.FC<ContactFormProps> = ({
       <div className="flex-1 overflow-y-auto p-4 max-w-2xl mx-auto w-full">
         <form onSubmit={handleSubmit} className="space-y-6 pb-24">
           
-          {/* Section: Basic Info */}
+          {/* Section: Contact Tact / Rhythm */}
           <section className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 space-y-4">
-            <h3 className="font-semibold text-gray-800 border-b pb-2">Basic Info</h3>
+            <h3 className="font-semibold text-gray-800 border-b pb-2 flex items-center gap-2">
+               <Activity size={18} /> Contact Rhythm
+            </h3>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700 block">
+                  When was the last time you contacted them?
+                </label>
+                <div className="relative">
+                  <Clock className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                  <input 
+                    type="date" 
+                    name="lastContactedDate" 
+                    value={formData.lastContactedDate} 
+                    onChange={handleChange} 
+                    className="w-full pl-9 p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" 
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700 block">
+                  Desired contact frequency
+                </label>
+                <div className="relative">
+                  <select 
+                    name="contactFrequency" 
+                    value={formData.contactFrequency} 
+                    onChange={handleChange}
+                    className="w-full p-2 pr-10 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-gray-900 appearance-none cursor-pointer"
+                  >
+                    <option value="" className="text-gray-500">Select frequency...</option>
+                    {FREQUENCY_OPTIONS.map(opt => (
+                      <option key={opt} value={opt} className="capitalize text-gray-900">{opt}</option>
+                    ))}
+                  </select>
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                    <ChevronDown className="h-4 w-4 text-gray-500" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Section: Primary Details */}
+          <section className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 space-y-4">
+            <h3 className="font-semibold text-gray-800 border-b pb-2">Primary Details</h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
                 <label className="text-sm font-medium text-gray-700">First Name</label>
@@ -210,9 +288,38 @@ export const ContactForm: React.FC<ContactFormProps> = ({
                 <input required name="lastName" value={formData.lastName} onChange={handleChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Doe" />
               </div>
             </div>
+            
             <div className="space-y-1">
               <label className="text-sm font-medium text-gray-700">Occupation</label>
               <input name="occupation" value={formData.occupation} onChange={handleChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="e.g. Architect" />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-gray-700">Tier Level</label>
+              <div className="relative">
+                <select 
+                  name="tier" 
+                  value={formData.tier} 
+                  onChange={handleChange}
+                  className="w-full p-2 pr-10 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-gray-900 appearance-none cursor-pointer"
+                >
+                  <option value="" className="text-gray-500">Select tier...</option>
+                  {TIER_OPTIONS.map(opt => (
+                    <option key={opt} value={opt} className="text-gray-900">{opt}</option>
+                  ))}
+                </select>
+                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                  <ChevronDown className="h-4 w-4 text-gray-500" />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-gray-700">Birthday</label>
+              <div className="relative">
+                <Calendar className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                <input type="date" name="birthday" value={formData.birthday} onChange={handleChange} className="w-full pl-9 p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+              </div>
             </div>
           </section>
 
@@ -223,13 +330,6 @@ export const ContactForm: React.FC<ContactFormProps> = ({
             </h3>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-gray-700">Birthday</label>
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-                  <input type="date" name="birthday" value={formData.birthday} onChange={handleChange} className="w-full pl-9 p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
-                </div>
-              </div>
               <div className="space-y-1">
                 <label className="text-sm font-medium text-gray-700">Partner's Name</label>
                 <input name="partnerName" value={formData.partnerName} onChange={handleChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Name" />

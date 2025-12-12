@@ -4,6 +4,10 @@ export interface Child {
   age: string;
 }
 
+export type ContactFrequency = 'weekly' | 'monthly' | 'quarterly' | 'bi-annually' | 'yearly' | '';
+
+export type TierLevel = 'Close Friend/Family' | 'Friend/Colleague' | 'Acquaintance' | '';
+
 export interface Contact {
   id: string;
   firstName: string;
@@ -16,6 +20,9 @@ export interface Contact {
   interests: string; // Comma separated or long text
   notes: string;
   avatarColor: string;
+  lastContactedDate: string;
+  contactFrequency: ContactFrequency;
+  tier: TierLevel;
 }
 
 export type ViewState = 'LIST' | 'CREATE' | 'EDIT';
