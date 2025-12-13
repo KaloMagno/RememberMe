@@ -27,6 +27,7 @@ const EMPTY_CONTACT: Contact = {
   children: [],
   childrenNotes: '',
   siblings: [],
+  siblingsNotes: '',
   education: '',
   occupation: '',
   interests: '',
@@ -44,6 +45,21 @@ const EMPTY_CONTACT: Contact = {
 const FREQUENCY_OPTIONS: ContactFrequency[] = ['weekly', 'monthly', 'quarterly', 'bi-annually', 'yearly'];
 const TIER_OPTIONS: TierLevel[] = ['1 - Close Friend/Family', '2 - Friend/Colleague', '3 - Acquaintance'];
 
+const MONTHS = [
+  { value: '01', label: 'January' },
+  { value: '02', label: 'February' },
+  { value: '03', label: 'March' },
+  { value: '04', label: 'April' },
+  { value: '05', label: 'May' },
+  { value: '06', label: 'June' },
+  { value: '07', label: 'July' },
+  { value: '08', label: 'August' },
+  { value: '09', label: 'September' },
+  { value: '10', label: 'October' },
+  { value: '11', label: 'November' },
+  { value: '12', label: 'December' },
+];
+
 type QuestionStatus = 'yes' | 'no' | 'unsure' | null;
 
 export const ContactForm: React.FC<ContactFormProps> = ({ 
@@ -57,6 +73,29 @@ export const ContactForm: React.FC<ContactFormProps> = ({
   const [showAI, setShowAI] = useState(false);
   const [showContactInfo, setShowContactInfo] = useState(
     !!(initialData?.phoneNumber || initialData?.email || initialData?.instagram || initialData?.linkedin)
+  );
+  
+  // Birthday Local State
+  const [birthdayState, setBirthdayState] = useState(() => {
+    const parts = (initialData?.birthday || '').split('-');
+    if (parts.length === 3) {
+      return { 
+        year: parts[0] === '0000' ? '' : parts[0], 
+        month: parts[1], 
+        day: parts[2] 
+      };
+    }
+    return { year: '', month: '', day: '' };
+  });
+
+  // Initialize showChildrenDetails based on whether any child has specific data
+  const [showChildrenDetails, setShowChildrenDetails] = useState(
+    !!(initialData?.children && initialData.children.some(c => c.name || c.age || c.birthRank))
+  );
+
+  // Initialize showSiblingDetails based on whether any sibling has specific data
+  const [showSiblingDetails, setShowSiblingDetails] = useState(
+    !!(initialData?.siblings && initialData.siblings.some(s => s.name || s.relation))
   );
 
   // Initialize hasChildren based on whether children exist in the data
@@ -82,6 +121,46 @@ export const ContactForm: React.FC<ContactFormProps> = ({
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleBirthdayPartChange = (field: 'day'|'month'|'year', value: string) => {
+    let newState = { ...birthdayState, [field]: value };
+    
+    // Basic validation
+    if (field === 'day') {
+        const dayNum = parseInt(value);
+        if (value && (isNaN(dayNum) || dayNum < 1 || dayNum > 31)) return; 
+    }
+    if (field === 'year') {
+         const yearNum = parseInt(value);
+        if (value && value.length > 4) return;
+        if (value && isNaN(yearNum)) return;
+    }
+
+    setBirthdayState(newState);
+    
+    // Update formData
+    if (newState.month && newState.day) {
+        setFormData(prev => ({ 
+            ...prev, 
+            birthday: `${newState.year || '0000'}-${newState.month}-${newState.day.padStart(2, '0')}` 
+        }));
+    } else {
+         setFormData(prev => ({ ...prev, birthday: '' }));
+    }
+  };
+
+  const formatDisplayDate = (dateStr: string) => {
+    if (!dateStr) return "—";
+    const [year, month, day] = dateStr.split('-');
+    if (!month || !day) return dateStr;
+    
+    const monthName = MONTHS.find(m => m.value === month)?.label || month;
+    
+    if (year === '0000') {
+      return `${monthName} ${parseInt(day)}`;
+    }
+    return `${monthName} ${parseInt(day)}, ${year}`;
   };
 
   const handleChildChange = (index: number, field: keyof Child, value: string) => {
@@ -128,6 +207,9 @@ export const ContactForm: React.FC<ContactFormProps> = ({
   };
 
   const handleSiblingCountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Prevent explicitly entering '0' when hasSiblings is yes
+    if (hasSiblings === 'yes' && e.target.value === '0') return;
+
     const count = parseInt(e.target.value) || 0;
     // Limit to reasonable number to prevent UI explosion
     if (count < 0 || count > 20) return;
@@ -158,6 +240,7 @@ export const ContactForm: React.FC<ContactFormProps> = ({
     setHasChildren(value);
     if (value !== 'yes') {
       setFormData(prev => ({ ...prev, children: [], childrenNotes: '' }));
+      setShowChildrenDetails(false);
     } else if (formData.children.length === 0) {
       // Default to 1 child when switching to yes
       setFormData(prev => ({ 
@@ -175,7 +258,18 @@ export const ContactForm: React.FC<ContactFormProps> = ({
   const handleHasSiblingsChange = (value: QuestionStatus) => {
     setHasSiblings(value);
     if (value !== 'yes') {
-      setFormData(prev => ({ ...prev, siblings: [] }));
+      setFormData(prev => ({ ...prev, siblings: [], siblingsNotes: '' }));
+      setShowSiblingDetails(false);
+    } else if (formData.siblings.length === 0) {
+      // Default to 1 sibling when switching to yes
+      setFormData(prev => ({ 
+        ...prev, 
+        siblings: [{ 
+          id: Math.random().toString(), 
+          name: '', 
+          relation: '' 
+        }] 
+      }));
     }
   };
 
@@ -203,6 +297,7 @@ export const ContactForm: React.FC<ContactFormProps> = ({
     
     if (hasSiblings !== 'yes') {
       cleanData.siblings = [];
+      cleanData.siblingsNotes = '';
     }
     
     onSave(cleanData);
@@ -322,7 +417,7 @@ export const ContactForm: React.FC<ContactFormProps> = ({
                 <div>
                   <label className="text-xs font-medium text-gray-400 uppercase">Birthday</label>
                   <p className="text-gray-900 flex items-center gap-2">
-                     {formData.birthday || "—"}
+                     {formatDisplayDate(formData.birthday)}
                   </p>
                 </div>
               </div>
@@ -367,38 +462,41 @@ export const ContactForm: React.FC<ContactFormProps> = ({
                     ))}
                   </div>
                 ) : <p className="text-gray-400 text-sm">None listed</p>}
+
+                {formData.siblingsNotes && (
+                  <p className="text-xs text-gray-500 mt-2 italic border-l-2 border-gray-200 pl-2">
+                    {formData.siblingsNotes}
+                  </p>
+                )}
               </div>
             </div>
           </div>
 
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
             <div className="p-4 border-b border-gray-50 font-semibold text-gray-700 bg-gray-50 flex items-center gap-2">
-              <Briefcase size={18} className="text-amber-500" /> Background
+              <FileText size={18} className="text-slate-500" /> Context
             </div>
             <div className="p-4 space-y-4">
               <div>
-                <label className="text-xs font-medium text-gray-400 uppercase">Education</label>
+                <label className="text-xs font-medium text-gray-400 uppercase">Education / Studies</label>
                 <div className="flex items-center gap-2 mt-1">
                   <GraduationCap size={16} className="text-gray-400" />
                   <p className="text-gray-900">{formData.education || "—"}</p>
                 </div>
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-400 uppercase">Interests</label>
+                <label className="text-xs font-medium text-gray-400 uppercase">Interests & Hobbies</label>
                 <div className="flex items-center gap-2 mt-1">
                   <Smile size={16} className="text-gray-400" />
                   <p className="text-gray-900">{formData.interests || "—"}</p>
                 </div>
               </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="p-4 border-b border-gray-50 font-semibold text-gray-700 bg-gray-50 flex items-center gap-2">
-              <FileText size={18} className="text-slate-400" /> Notes
-            </div>
-            <div className="p-4 bg-yellow-50/50 min-h-[100px]">
-              <p className="text-gray-700 whitespace-pre-wrap">{formData.notes || "No notes yet."}</p>
+              <div className="pt-2 border-t border-gray-50">
+                 <label className="text-xs font-medium text-gray-400 uppercase mb-2 block">Notes</label>
+                 <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-100 text-gray-700 whitespace-pre-wrap text-sm">
+                    {formData.notes || "No notes recorded."}
+                 </div>
+              </div>
             </div>
           </div>
 
@@ -438,7 +536,7 @@ export const ContactForm: React.FC<ContactFormProps> = ({
                     name="lastContactedDate" 
                     value={formData.lastContactedDate} 
                     onChange={handleChange} 
-                    className="w-full pl-9 p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" 
+                    className="w-full pl-9 p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-gray-900" 
                   />
                 </div>
               </div>
@@ -494,19 +592,39 @@ export const ContactForm: React.FC<ContactFormProps> = ({
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
                 <label className="text-sm font-medium text-gray-700">First Name</label>
-                <input required name="firstName" value={formData.firstName} onChange={handleChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Jane" />
+                <input required name="firstName" value={formData.firstName} onChange={handleChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-gray-900" placeholder="Jane" />
               </div>
               <div className="space-y-1">
                 <label className="text-sm font-medium text-gray-700">Last Name</label>
-                <input required name="lastName" value={formData.lastName} onChange={handleChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Doe" />
+                <input required name="lastName" value={formData.lastName} onChange={handleChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-gray-900" placeholder="Doe" />
               </div>
             </div>
 
             <div className="space-y-1">
               <label className="text-sm font-medium text-gray-700">Birthday</label>
-              <div className="relative">
-                <Calendar className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-                <input type="date" name="birthday" value={formData.birthday} onChange={handleChange} className="w-full pl-9 p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+              <div className="grid grid-cols-4 gap-2">
+                <select 
+                    value={birthdayState.month} 
+                    onChange={(e) => handleBirthdayPartChange('month', e.target.value)}
+                    className="col-span-2 p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-gray-900 min-w-0"
+                >
+                    <option value="" className="text-gray-500">Month</option>
+                    {MONTHS.map(m => <option key={m.value} value={m.value} className="text-gray-900">{m.label}</option>)}
+                </select>
+                <input 
+                    placeholder="Day" 
+                    value={birthdayState.day} 
+                    onChange={(e) => handleBirthdayPartChange('day', e.target.value)}
+                    className="col-span-1 p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-center min-w-0 bg-white text-gray-900"
+                    maxLength={2}
+                />
+                <input 
+                    placeholder="Year" 
+                    value={birthdayState.year} 
+                    onChange={(e) => handleBirthdayPartChange('year', e.target.value)}
+                    className="col-span-1 p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-center min-w-0 bg-white text-gray-900"
+                    maxLength={4}
+                />
               </div>
             </div>
 
@@ -527,7 +645,7 @@ export const ContactForm: React.FC<ContactFormProps> = ({
                     <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
                        <Phone size={14} /> Phone Number
                     </label>
-                    <input name="phoneNumber" value={formData.phoneNumber || ''} onChange={handleChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="+1 555-0000" />
+                    <input name="phoneNumber" value={formData.phoneNumber || ''} onChange={handleChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-gray-900" placeholder="+1 555-0000" />
                   </div>
 
                   <div className="space-y-3">
@@ -535,17 +653,17 @@ export const ContactForm: React.FC<ContactFormProps> = ({
                     
                     <div className="flex items-center gap-2">
                       <Mail size={16} className="text-gray-400 min-w-[16px]" />
-                      <input name="email" value={formData.email || ''} onChange={handleChange} className="flex-1 p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm" placeholder="Email Address" />
+                      <input name="email" value={formData.email || ''} onChange={handleChange} className="flex-1 p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm bg-white text-gray-900" placeholder="Email Address" />
                     </div>
 
                     <div className="flex items-center gap-2">
                       <Instagram size={16} className="text-gray-400 min-w-[16px]" />
-                      <input name="instagram" value={formData.instagram || ''} onChange={handleChange} className="flex-1 p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm" placeholder="Instagram Handle" />
+                      <input name="instagram" value={formData.instagram || ''} onChange={handleChange} className="flex-1 p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm bg-white text-gray-900" placeholder="Instagram Handle" />
                     </div>
 
                     <div className="flex items-center gap-2">
                       <Linkedin size={16} className="text-gray-400 min-w-[16px]" />
-                      <input name="linkedin" value={formData.linkedin || ''} onChange={handleChange} className="flex-1 p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm" placeholder="LinkedIn Profile" />
+                      <input name="linkedin" value={formData.linkedin || ''} onChange={handleChange} className="flex-1 p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm bg-white text-gray-900" placeholder="LinkedIn Profile" />
                     </div>
                   </div>
                 </div>
@@ -595,7 +713,7 @@ export const ContactForm: React.FC<ContactFormProps> = ({
                     name="partnerName" 
                     value={formData.partnerName} 
                     onChange={handleChange} 
-                    className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" 
+                    className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-gray-900" 
                     placeholder="Name" 
                   />
                 </div>
@@ -605,7 +723,7 @@ export const ContactForm: React.FC<ContactFormProps> = ({
                     name="partnerNotes" 
                     value={formData.partnerNotes || ''} 
                     onChange={handleChange} 
-                    className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none h-20 text-sm" 
+                    className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none h-20 text-sm bg-white text-gray-900" 
                     placeholder="Anniversary, occupation, shared interests..." 
                   />
                 </div>
@@ -653,7 +771,7 @@ export const ContactForm: React.FC<ContactFormProps> = ({
                      value={formData.children.length === 0 ? '' : formData.children.length}
                      onChange={handleChildCountChange}
                      placeholder="1"
-                     className="w-24 p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                     className="w-24 p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-gray-900"
                    />
                 </div>
 
@@ -664,50 +782,64 @@ export const ContactForm: React.FC<ContactFormProps> = ({
                     name="childrenNotes" 
                     value={formData.childrenNotes || ''} 
                     onChange={handleChange} 
-                    className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none h-16 text-sm" 
+                    className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none h-16 text-sm bg-white text-gray-900" 
                     placeholder="Shared interests, parenting style, etc..." 
                   />
                 </div>
 
-                {/* List */}
-                <div className="space-y-3">
-                  {formData.children.map((child, idx) => (
-                    <div key={child.id} className="p-3 bg-gray-50 rounded-lg border border-gray-100 space-y-3">
-                       <div className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Child {idx + 1}</div>
-                       <div className="space-y-2">
-                         <div className="space-y-1">
-                           <label className="text-xs font-medium text-gray-500">Name</label>
-                           <input 
-                              placeholder="Name" 
-                              value={child.name} 
-                              onChange={(e) => handleChildChange(idx, 'name', e.target.value)}
-                              className="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white"
-                           />
-                         </div>
-                         <div className="flex gap-3">
-                            <div className="flex-1 space-y-1">
-                              <label className="text-xs font-medium text-gray-500">Age / Birth Year</label>
-                              <input 
-                                placeholder="e.g. 2018 or 5" 
-                                value={child.age} 
-                                onChange={(e) => handleChildChange(idx, 'age', e.target.value)}
-                                className="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white"
-                              />
-                            </div>
-                            <div className="w-24 space-y-1">
-                              <label className="text-xs font-medium text-gray-500">Birth Rank</label>
-                              <input 
-                                placeholder="#" 
-                                value={child.birthRank || ''} 
-                                onChange={(e) => handleChildChange(idx, 'birthRank', e.target.value)}
-                                className="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white"
-                              />
-                            </div>
-                         </div>
-                       </div>
-                    </div>
-                  ))}
+                {/* Child Details Toggle */}
+                <div className="pt-1">
+                   <button 
+                     type="button" 
+                     onClick={() => setShowChildrenDetails(!showChildrenDetails)}
+                     className="flex items-center text-blue-600 text-sm font-medium hover:text-blue-700 transition"
+                   >
+                     {showChildrenDetails ? <Minus size={16} className="mr-1" /> : <Plus size={16} className="mr-1" />}
+                     {showChildrenDetails ? "Hide child details" : "Add child details"}
+                   </button>
                 </div>
+
+                {/* List */}
+                {showChildrenDetails && (
+                  <div className="space-y-3">
+                    {formData.children.map((child, idx) => (
+                      <div key={child.id} className="p-3 bg-gray-50 rounded-lg border border-gray-100 space-y-3">
+                         <div className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Child {idx + 1}</div>
+                         <div className="space-y-2">
+                           <div className="space-y-1">
+                             <label className="text-xs font-medium text-gray-500">Name</label>
+                             <input 
+                                placeholder="Name" 
+                                value={child.name} 
+                                onChange={(e) => handleChildChange(idx, 'name', e.target.value)}
+                                className="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white text-gray-900"
+                             />
+                           </div>
+                           <div className="flex gap-3">
+                              <div className="flex-1 space-y-1">
+                                <label className="text-xs font-medium text-gray-500">Age / Birth Year</label>
+                                <input 
+                                  placeholder="e.g. 2018 or 5" 
+                                  value={child.age} 
+                                  onChange={(e) => handleChildChange(idx, 'age', e.target.value)}
+                                  className="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white text-gray-900"
+                                />
+                              </div>
+                              <div className="w-24 space-y-1">
+                                <label className="text-xs font-medium text-gray-500">Birth Rank</label>
+                                <input 
+                                  placeholder="#" 
+                                  value={child.birthRank || ''} 
+                                  onChange={(e) => handleChildChange(idx, 'birthRank', e.target.value)}
+                                  className="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white text-gray-900"
+                                />
+                              </div>
+                           </div>
+                         </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
@@ -745,52 +877,79 @@ export const ContactForm: React.FC<ContactFormProps> = ({
                    <label className="text-sm font-medium text-gray-700">How many siblings?</label>
                    <input 
                      type="number" 
-                     min="0"
+                     min="1"
                      max="20"
                      value={formData.siblings.length === 0 ? '' : formData.siblings.length}
                      onChange={handleSiblingCountChange}
-                     placeholder="0"
-                     className="w-24 p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                     placeholder="1"
+                     className="w-24 p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-gray-900"
                    />
                 </div>
 
-                <div className="space-y-3">
-                  {formData.siblings.map((sibling, idx) => (
-                    <div key={sibling.id} className="p-3 bg-gray-50 rounded-lg border border-gray-100 space-y-3">
-                       <div className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Sibling {idx + 1}</div>
-                       <div className="space-y-2">
-                         <div className="space-y-1">
-                           <label className="text-xs font-medium text-gray-500">Name</label>
-                           <input 
-                              placeholder="Name" 
-                              value={sibling.name} 
-                              onChange={(e) => handleSiblingChange(idx, 'name', e.target.value)}
-                              className="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white"
-                           />
-                         </div>
-                         <div className="space-y-1">
-                            <label className="text-xs font-medium text-gray-500">Relation</label>
-                            <div className="flex gap-2">
-                                <button
-                                    type="button"
-                                    onClick={() => handleSiblingChange(idx, 'relation', 'older')}
-                                    className={`flex-1 py-2 text-xs font-medium rounded-lg border transition ${sibling.relation === 'older' ? 'bg-blue-100 border-blue-200 text-blue-700' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}
-                                >
-                                    Older
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => handleSiblingChange(idx, 'relation', 'younger')}
-                                    className={`flex-1 py-2 text-xs font-medium rounded-lg border transition ${sibling.relation === 'younger' ? 'bg-blue-100 border-blue-200 text-blue-700' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}
-                                >
-                                    Younger
-                                </button>
-                            </div>
-                         </div>
-                       </div>
-                    </div>
-                  ))}
+                {/* New Comment Field for Siblings */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">General Remarks</label>
+                  <textarea 
+                    name="siblingsNotes" 
+                    value={formData.siblingsNotes || ''} 
+                    onChange={handleChange} 
+                    className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none h-16 text-sm bg-white text-gray-900" 
+                    placeholder="Names to remember, location, etc..." 
+                  />
                 </div>
+
+                {/* Sibling Details Toggle */}
+                <div className="pt-1">
+                   <button 
+                     type="button" 
+                     onClick={() => setShowSiblingDetails(!showSiblingDetails)}
+                     className="flex items-center text-blue-600 text-sm font-medium hover:text-blue-700 transition"
+                   >
+                     {showSiblingDetails ? <Minus size={16} className="mr-1" /> : <Plus size={16} className="mr-1" />}
+                     {showSiblingDetails ? "Hide sibling details" : "Add sibling details"}
+                   </button>
+                </div>
+
+                {/* List */}
+                {showSiblingDetails && (
+                  <div className="space-y-3">
+                    {formData.siblings.map((sibling, idx) => (
+                      <div key={sibling.id} className="p-3 bg-gray-50 rounded-lg border border-gray-100 space-y-3">
+                         <div className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Sibling {idx + 1}</div>
+                         <div className="space-y-2">
+                           <div className="space-y-1">
+                             <label className="text-xs font-medium text-gray-500">Name</label>
+                             <input 
+                                placeholder="Name" 
+                                value={sibling.name} 
+                                onChange={(e) => handleSiblingChange(idx, 'name', e.target.value)}
+                                className="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white text-gray-900"
+                             />
+                           </div>
+                           <div className="space-y-1">
+                              <label className="text-xs font-medium text-gray-500">Relation</label>
+                              <div className="flex gap-2">
+                                  <button
+                                      type="button"
+                                      onClick={() => handleSiblingChange(idx, 'relation', 'older')}
+                                      className={`flex-1 py-2 text-xs font-medium rounded-lg border transition ${sibling.relation === 'older' ? 'bg-blue-100 border-blue-200 text-blue-700' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+                                  >
+                                      Older
+                                  </button>
+                                  <button
+                                      type="button"
+                                      onClick={() => handleSiblingChange(idx, 'relation', 'younger')}
+                                      className={`flex-1 py-2 text-xs font-medium rounded-lg border transition ${sibling.relation === 'younger' ? 'bg-blue-100 border-blue-200 text-blue-700' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+                                  >
+                                      Younger
+                                  </button>
+                              </div>
+                           </div>
+                         </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </section>
@@ -800,15 +959,15 @@ export const ContactForm: React.FC<ContactFormProps> = ({
             <h3 className="font-semibold text-gray-800 border-b pb-2">Context</h3>
             <div className="space-y-1">
               <label className="text-sm font-medium text-gray-700">Education / Studies</label>
-              <input name="education" value={formData.education} onChange={handleChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="e.g. Biology at Stanford" />
+              <input name="education" value={formData.education} onChange={handleChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-gray-900" placeholder="e.g. Biology at Stanford" />
             </div>
             <div className="space-y-1">
               <label className="text-sm font-medium text-gray-700">Interests & Hobbies</label>
-              <textarea name="interests" value={formData.interests} onChange={handleChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none h-20" placeholder="e.g. Tennis, French cooking, Sci-Fi" />
+              <textarea name="interests" value={formData.interests} onChange={handleChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none h-20 bg-white text-gray-900" placeholder="e.g. Tennis, French cooking, Sci-Fi" />
             </div>
              <div className="space-y-1">
               <label className="text-sm font-medium text-gray-700">Notes</label>
-              <textarea name="notes" value={formData.notes} onChange={handleChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none h-24 bg-yellow-50" placeholder="Important things to remember..." />
+              <textarea name="notes" value={formData.notes} onChange={handleChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none h-24 bg-yellow-50 text-gray-900" placeholder="Important things to remember..." />
             </div>
           </section>
 
@@ -834,4 +993,4 @@ export const ContactForm: React.FC<ContactFormProps> = ({
       </div>
     </div>
   );
-};
+}

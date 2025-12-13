@@ -25,6 +25,7 @@ export interface Contact {
   children: Child[];
   childrenNotes?: string;
   siblings: Sibling[];
+  siblingsNotes?: string;
   education: string;
   occupation: string;
   interests: string; // Comma separated or long text

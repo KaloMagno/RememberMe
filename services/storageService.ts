@@ -14,6 +14,7 @@ const MOCK_DATA: Contact[] = [
     children: [{ id: 'c1', name: 'Mia', age: '5' }],
     childrenNotes: 'Mia loves dinosaurs and space.',
     siblings: [],
+    siblingsNotes: 'Has a twin sister living in Madrid.',
     education: 'Masters in Art History, NYU',
     occupation: 'Gallery Curator',
     interests: 'Modern art, hiking, ceramic pottery',
