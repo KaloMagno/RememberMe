@@ -12,6 +12,8 @@ const MOCK_DATA: Contact[] = [
     birthday: '1990-05-15',
     partnerName: 'Carlos',
     children: [{ id: 'c1', name: 'Mia', age: '5' }],
+    childrenNotes: 'Mia loves dinosaurs and space.',
+    siblings: [],
     education: 'Masters in Art History, NYU',
     occupation: 'Gallery Curator',
     interests: 'Modern art, hiking, ceramic pottery',
@@ -19,7 +21,10 @@ const MOCK_DATA: Contact[] = [
     avatarColor: 'bg-indigo-500',
     lastContactedDate: '2023-10-15',
     contactFrequency: 'monthly',
-    tier: 'Close Friend/Family'
+    tier: '1 - Close Friend/Family',
+    phoneNumber: '555-0123',
+    email: 'alice.rivera@example.com',
+    instagram: '@alicerivera_art'
   },
   {
     id: '2',
@@ -28,6 +33,7 @@ const MOCK_DATA: Contact[] = [
     birthday: '1988-11-20',
     partnerName: 'Sarah',
     children: [],
+    siblings: [],
     education: 'BS Computer Science',
     occupation: 'Software Engineer',
     interests: 'Sci-fi novels, mechanical keyboards, coffee roasting',
@@ -35,7 +41,8 @@ const MOCK_DATA: Contact[] = [
     avatarColor: 'bg-emerald-500',
     lastContactedDate: '2023-12-01',
     contactFrequency: 'quarterly',
-    tier: 'Friend/Colleague'
+    tier: '2 - Friend/Colleague',
+    linkedin: 'david-chen-dev'
   }
 ];
 

@@ -1,12 +1,19 @@
 export interface Child {
   id: string;
   name: string;
-  age: string;
+  age: string; // Age or Birth Year
+  birthRank?: string;
+}
+
+export interface Sibling {
+  id: string;
+  name: string;
+  relation: 'older' | 'younger' | '';
 }
 
 export type ContactFrequency = 'weekly' | 'monthly' | 'quarterly' | 'bi-annually' | 'yearly' | '';
 
-export type TierLevel = 'Close Friend/Family' | 'Friend/Colleague' | 'Acquaintance' | '';
+export type TierLevel = '1 - Close Friend/Family' | '2 - Friend/Colleague' | '3 - Acquaintance' | '';
 
 export interface Contact {
   id: string;
@@ -14,7 +21,10 @@ export interface Contact {
   lastName: string;
   birthday: string; // YYYY-MM-DD
   partnerName: string;
+  partnerNotes?: string;
   children: Child[];
+  childrenNotes?: string;
+  siblings: Sibling[];
   education: string;
   occupation: string;
   interests: string; // Comma separated or long text
@@ -23,6 +33,10 @@ export interface Contact {
   lastContactedDate: string;
   contactFrequency: ContactFrequency;
   tier: TierLevel;
+  phoneNumber?: string;
+  email?: string;
+  instagram?: string;
+  linkedin?: string;
 }
 
 export type ViewState = 'LIST' | 'CREATE' | 'EDIT';
